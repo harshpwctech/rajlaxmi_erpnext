@@ -258,7 +258,9 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
 
 def get_parents_data(filters, partner_doctype):
 	filters_dict = {"parenttype": partner_doctype}
-
+	if filters.get(frappe.scrub(partner_doctype)):
+		filters_dict["parent"] = filters.get(frappe.scrub(partner_doctype))
+		
 	target_qty_amt_field = "target_amount"
 
 	if filters.get("fiscal_year"):

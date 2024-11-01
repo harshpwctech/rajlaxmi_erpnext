@@ -25,7 +25,13 @@ frappe.query_reports["Sales Person Target Variance"] = {
 				{ value: "Yearly", label: __("Yearly") },
 			],
 			default: "Monthly",
-		}
+		},
+        {
+            fieldname: "sales_person",
+            label: __("Sales Person"),
+			fieldtype: "Link",
+			options: "Sales Person"
+        }
 	],
 	formatter: function (value, row, column, data, default_formatter) {
 		value = default_formatter(value, row, column, data);
