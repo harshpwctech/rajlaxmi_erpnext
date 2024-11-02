@@ -86,7 +86,7 @@ frappe.query_reports["Sales Person Target Variance"] = {
 		return  frappe.call({
 			method: "rajlaxmi_erpnext.rajlaxmi_erpnext.report.sales_person_target_variance.sales_person_target_variance.get_attendance_years",
 			callback: function(r) {
-				var year_filter = frappe.query_reports.get_filter('year');
+				var year_filter = frappe.query_report.get_filter('year');
 				year_filter.df.options = r.message;
 				year_filter.df.default = r.message.split("\n")[0];
 				year_filter.refresh();
