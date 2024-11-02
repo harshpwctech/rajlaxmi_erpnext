@@ -21,6 +21,8 @@ def get_data_column(filters, partner_doctype, with_salary=True):
     for key, value in rows.items():
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
         value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
+        if filters.get("team_lead") and value.get("team_lead") != filters.get("team_lead"):
+            continue
         value.update({frappe.scrub(partner_doctype): key})
         if value.get("total_variance") < 0:
             per_day = get_per_day_requirement(filters, value.get("total_variance")*-1)
@@ -239,9 +241,6 @@ def get_parents_data(filters, partner_doctype):
     filters_dict = {"parenttype": partner_doctype}
     if filters.get(frappe.scrub(partner_doctype)):
         filters_dict["parent"] = filters.get(frappe.scrub(partner_doctype))
-    
-    if filters.get("team_lead"):
-        filters_dict["parent_sales_person"] = filters.get("team_lead")
         
     target_qty_amt_field = "target_amount"
     
