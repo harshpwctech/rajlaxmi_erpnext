@@ -21,7 +21,7 @@ def get_data_column(filters, partner_doctype):
     for key, value in rows.items():
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
         value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
-        value.update({frappe.scrub(partner_doctype): key[0]})
+        value.update({frappe.scrub(partner_doctype): key})
 
         data.append(value)
 
