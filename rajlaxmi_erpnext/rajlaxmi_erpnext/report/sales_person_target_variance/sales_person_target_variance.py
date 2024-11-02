@@ -11,7 +11,7 @@ from frappe.utils.data import get_first_day, get_last_day, date_diff
 def execute(filters=None):
     return get_data_column(filters, "Sales Person")
 
-def get_data_column(filters, partner_doctype):
+def get_data_column(filters, partner_doctype, with_salary=True):
     data = []
     columns = get_columns(partner_doctype)
     rows = get_data(filters, partner_doctype)
@@ -22,7 +22,9 @@ def get_data_column(filters, partner_doctype):
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
         value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
         value.update({frappe.scrub(partner_doctype): key})
-
+        if value.get("total_variance") < 0:
+            per_day = get_per_day_requirement(filters, value.get("total_variance")*-1)
+            value.update({"per_day": per_day})
         data.append(value)
 
     return columns, data
@@ -236,6 +238,9 @@ def get_parents_data(filters, partner_doctype):
     filters_dict = {"parenttype": partner_doctype}
     if filters.get(frappe.scrub(partner_doctype)):
         filters_dict["parent"] = filters.get(frappe.scrub(partner_doctype))
+    
+    if filters.get("team_lead"):
+        filters_dict["parent_sales_person"] = filters.get("team_lead")
         
     target_qty_amt_field = "target_amount"
     
@@ -285,6 +290,28 @@ def get_target_percentage(filters, distribution_id):
         for d in doc.percentages:
             if d.month == month:
                 return d.percentage_allocation
+
+def get_per_day_requirement(filters, total_variance):
+    today = getdate()
+    if filters.get("period") == "Fiscal Year":
+        fiscal_year = get_fiscal_year(fiscal_year=filters.get("fiscal_year"), as_dict=1)
+        balance_days =  date_diff(fiscal_year.year_end_date, today)
+        if balance_days > 0:
+            return total_variance/balance_days
+    elif filters.get("period") == "MTD":
+        start_date = getdate(filters.get("date"))
+        end_date = get_last_day(start_date)
+        balance_days =  date_diff(end_date, today)
+        if balance_days > 0:
+            return total_variance/balance_days
+    elif filters.get("period") == "Month":
+        start_date = getdate("{1}-{0}-01".format(filters.get("month"), filters.get("year")))
+        end_date = get_last_day(start_date)
+        balance_days =  date_diff(end_date, today)
+        if balance_days > 0:
+            return total_variance/balance_days
+    
+    return 0.00
 
     
 

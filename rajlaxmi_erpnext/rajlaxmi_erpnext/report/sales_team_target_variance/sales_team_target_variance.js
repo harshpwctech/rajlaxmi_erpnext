@@ -1,4 +1,4 @@
-frappe.query_reports["Sales Person Target Variance"] = {
+frappe.query_reports["Sales Team Target Variance"] = {
 	"filters": [
 		{
 			"fieldname": "company",
