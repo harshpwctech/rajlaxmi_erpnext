@@ -13,7 +13,7 @@ def execute(filters=None):
 
 def get_data_column(filters, partner_doctype, with_salary=True):
     data = []
-    columns = get_columns(partner_doctype)
+    columns = get_columns(partner_doctype, with_salary)
     rows = get_data(filters, partner_doctype)
     if not rows:
         return columns, data
@@ -29,7 +29,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
 
     return columns, data
 
-def get_columns(partner_doctype):
+def get_columns(partner_doctype, with_salary):
     fieldtype, options = "Currency", "currency"
 
     columns = [
@@ -102,7 +102,9 @@ def get_columns(partner_doctype):
             "options": options,
             "width": 150,
             "default": 0.00,
-        },
+        }]
+    if with_salary:
+        columns.extend([
         {
             "fieldname": "salary",
             "label": _("Salary"),
@@ -115,9 +117,8 @@ def get_columns(partner_doctype):
             "label": _("% Achieved vs Salary"),
             "fieldtype": "Percent",
             "width": 150,
-        },
-            
-    ]
+        }    
+    ])
 
     return columns
 
