@@ -9,14 +9,14 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2024-11-03 17:25:30.983237",
+ "modified": "2024-11-03 17:28:30.983237",
  "modified_by": "Administrator",
  "module": "Rajlaxmi Erpnext",
- "name": "Sales Person Target Variance",
+ "name": "Sales Team Target Variance",
  "owner": "Administrator",
  "prepared_report": 0,
  "ref_doctype": "Sales Invoice",
- "report_name": "Sales Person Target Variance",
+ "report_name": "Sales Team Target Variance",
  "report_type": "Script Report",
  "roles": [
   {
