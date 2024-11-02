@@ -21,6 +21,8 @@ def get_data_column(filters, partner_doctype, with_salary=True):
     for key, value in rows.items():
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
         value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
+        if frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience"):
+            value.update({"experience": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience")})
         if filters.get("team_lead") and value.get("team_lead") != filters.get("team_lead"):
             continue
         value.update({frappe.scrub(partner_doctype): key})
@@ -59,7 +61,7 @@ def get_columns(partner_doctype, with_salary):
         {
             "fieldname": "experience",
             "label": _("Total Experience"),
-            "fieldtype": "Float",
+            "fieldtype": "Int",
             "default": 0.00,
             "width": 100,
         },
