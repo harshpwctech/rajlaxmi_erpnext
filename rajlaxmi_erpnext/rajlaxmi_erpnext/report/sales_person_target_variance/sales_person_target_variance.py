@@ -88,14 +88,14 @@ def get_columns(partner_doctype, with_salary, based_on):
         }]
     
     if based_on in ("Item Group", "Item"):
-        columns.extend({
+        columns.append({
             "fieldname": "item_group",
             "label": _("Item Group"),
             "fieldtype": "Data",
             "width": 150,
         })
     if based_on == "Item":
-        columns.extend({
+        columns.append({
             "fieldname": "item_code",
             "label": _("Item"),
             "fieldtype": "Data",
@@ -235,7 +235,9 @@ def prepare_data(
                     if isinstance(item_group_items, list):
                         if not any(r.item_code == i.item_code for i in item_group_items):
                             item_group_items.append({r.item_code:0})
-                    item_group_items[r.item_code]+= r.get(qty_or_amount_field, 0)
+                    for i in item_group_items:
+                        if r.item_code == i:
+                            i += r.get(qty_or_amount_field, 0)
 
         details["total_variance"] = details.get("total_achieved") - details.get("total_target")
         details["per_achieved"] = details.get("total_achieved") / details.get("total_target") * 100
