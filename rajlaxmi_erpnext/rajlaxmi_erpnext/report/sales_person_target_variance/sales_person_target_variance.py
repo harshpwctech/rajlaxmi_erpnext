@@ -223,25 +223,25 @@ def prepare_data(
                 )
             ):
                 details["total_achieved"] += r.get(qty_or_amount_field, 0)
-                if based_on == "Item Group":
+                if based_on in ("Item Group", "Item"):
                     item_group = r.item_group
                     item_group_details = details.get("item_groups", {})
                     if item_group not in item_group_details:
                         item_group_details.setdefault(item_group, {"total_achieved": 0, "items": []})
                     item_group_details.get(item_group)["total_achieved"] += r.get(qty_or_amount_field, 0)
-                if based_on == "Item":
-                    item_groups = details.get("item_groups", {})
-                    item_group_items = item_groups.get(r.item_group, {}).get("items", [])
-                    if len(item_group_items):
-                        if not any(r.item_code == i["item_code"] for i in item_group_items):
-                            item_group_items.append(
-                                {"item_code": r.item_code,
-                                 "total_achieved": 0
-                                }
-                            )
-                    for i in item_group_items:
-                        if r.item_code == i["item_code"]:
-                            i["total_achieved"] += r.get(qty_or_amount_field, 0)
+                    if based_on == "Item":
+                        item_groups = details.get("item_groups", {})
+                        item_group_items = item_groups.get(r.item_group, {}).get("items", [])
+                        if len(item_group_items):
+                            if not any(r.item_code == i["item_code"] for i in item_group_items):
+                                item_group_items.append(
+                                    {"item_code": r.item_code,
+                                    "total_achieved": 0
+                                    }
+                                )
+                        for i in item_group_items:
+                            if r.item_code == i["item_code"]:
+                                i["total_achieved"] += r.get(qty_or_amount_field, 0)
 
         details["total_variance"] = details.get("total_achieved") - details.get("total_target")
         details["per_achieved"] = details.get("total_achieved") / details.get("total_target") * 100
