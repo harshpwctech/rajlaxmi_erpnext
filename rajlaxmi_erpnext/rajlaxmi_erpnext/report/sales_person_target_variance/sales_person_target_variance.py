@@ -233,7 +233,7 @@ def prepare_data(
                     item_groups = details.get("item_groups", {})
                     item_group_items = item_groups.get(r.item_group, {}).get("items", [])
                     if len(item_group_items):
-                        if not any(r.item_code == i for i in item_group_items):
+                        if not any(r.item_code == i for i, a in item_group_items.items()):
                             item_group_items.append({r.item_code:0})
                     for i in item_group_items:
                         if r.item_code == i:
