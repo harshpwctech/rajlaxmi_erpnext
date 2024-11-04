@@ -15,8 +15,6 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         return columns, data
 
     for key, value in rows.items():
-        if key == "Sanket Santosh Jadhav":
-            frappe.msgprint(frappe.as_json(value))
         if filters.get("based_on") == "Item Group":
             item_groups = value.get("item_groups", {})
             for k, v in item_groups.items():
