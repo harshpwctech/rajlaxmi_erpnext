@@ -15,6 +15,8 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         return columns, data
 
     for key, value in rows.items():
+        if key == "Sanket Santosh Jadhav":
+            frappe.msgprint(frappe.as_json(value))
         if filters.get("based_on") == "Item Group":
             item_groups = value.get("item_groups", {})
             for k, v in item_groups.items():
@@ -230,13 +232,13 @@ def prepare_data(
                         item_group_details.setdefault(item_group, {"total_achieved": 0, "items": []})
                     item_group_details.get(item_group)["total_achieved"] += r.get(qty_or_amount_field, 0)
                     if based_on == "Item":
-                        item_groups = details.get("item_groups", {})
-                        item_group_items = item_groups.get(r.item_group, {}).get("items", [])
+                        item_group_items = item_group_details.get(item_group).get("items", [])
                         if len(item_group_items):
-                            if not any(r.item_code == i["item_code"] for i in item_group_items):
+                            if not any(r.item_code == i.get("item_code") for i in item_group_items):
                                 item_group_items.append(
-                                    {"item_code": r.item_code,
-                                    "total_achieved": 0
+                                    {
+                                        "item_code": r.item_code,
+                                        "total_achieved": 0
                                     }
                                 )
                         for i in item_group_items:
