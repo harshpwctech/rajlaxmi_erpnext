@@ -224,9 +224,11 @@ def prepare_data(
             ):
                 details["total_achieved"] += r.get(qty_or_amount_field, 0)
                 if based_on == "Item Group":
-                    if r.item_group not in details.get["item_groups"]:
-                        details.get["item_groups"].setdefault(r.item_group, {"total_achieved": 0, "items": []})
-                    details.get["item_groups"].get(r.item_group).get("total_achieved") += r.get(qty_or_amount_field, 0)
+                    item_group = r.item_group
+                    item_group_details = details.get("item_groups", {})
+                    if item_group not in item_group_details:
+                        item_group_details.setdefault(item_group, {"total_achieved": 0, "items": []})
+                    item_group_details.get(item_group)["total_achieved"] += r.get(qty_or_amount_field, 0)
                 if based_on == "Item":
                     item_groups = details.get("item_groups", {})
                     item_group_items = item_groups.get(r.item_group, {}).get("items", [])
