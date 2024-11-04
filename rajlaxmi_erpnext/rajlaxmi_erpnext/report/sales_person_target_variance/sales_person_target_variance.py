@@ -1,11 +1,7 @@
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Count, Extract, Sum
-from erpnext.accounts.doctype.monthly_distribution.monthly_distribution import (
-    get_periodwise_distribution_data,
-)
-from erpnext.accounts.report.financial_statements import get_period_list
-from erpnext.accounts.utils import get_fiscal_year, getdate, cint, cstr
+from frappe.query_builder.functions import Extract
+from erpnext.accounts.utils import get_fiscal_year, getdate, cstr
 from frappe.utils.data import get_first_day, get_last_day, date_diff
 
 def execute(filters=None):
@@ -13,27 +9,45 @@ def execute(filters=None):
 
 def get_data_column(filters, partner_doctype, with_salary=True):
     data = []
-    columns = get_columns(partner_doctype, with_salary)
+    columns = get_columns(partner_doctype, with_salary, filters.get("based_on"))
     rows = get_data(filters, partner_doctype)
     if not rows:
         return columns, data
 
     for key, value in rows.items():
+        if filters.get("based_on") == "Item Group":
+            item_groups = value.get("item_groups", {})
+            for k, v in item_groups.items():
+                item_group = {
+                    "item_group": k,
+                    "total_achieved": v.get("total_achieved", 0)
+                }
+                data.append(item_group)
+        elif filters.get("based_on") == "Item":
+            item_groups = value.get("item_groups", {})
+            for k, v in item_groups.items():
+                for i, a in v.get("items").items():
+                    item = {
+                        "item_group": k,
+                        "item_code": i,
+                        "total_achieved": a
+                    }
+                    data.append(item)
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
         value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
         if frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience"):
             value.update({"experience": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience")})
-        if filters.get("team_lead") and value.get("team_lead") != filters.get("team_lead"):
-            continue
         value.update({frappe.scrub(partner_doctype): key})
         if value.get("total_variance") < 0:
             per_day = get_per_day_requirement(filters, value.get("total_variance")*-1)
             value.update({"per_day": per_day})
+        if filters.get("based_on") in ("Item Group", "Item"):
+            value.update({"bold": 1})
         data.append(value)
 
     return columns, data
 
-def get_columns(partner_doctype, with_salary):
+def get_columns(partner_doctype, with_salary, based_on):
     fieldtype, options = "Currency", "currency"
 
     columns = [
@@ -71,7 +85,23 @@ def get_columns(partner_doctype, with_salary):
             "fieldtype": "Int",
             "default": 0,
             "width": 150,
-        },
+        }]
+    
+    if based_on in ("Item Group", "Item"):
+        columns.extend({
+            "fieldname": "item_group",
+            "label": _("Item Group"),
+            "fieldtype": "Data",
+            "width": 150,
+        })
+    if based_on == "Item":
+        columns.extend({
+            "fieldname": "item_code",
+            "label": _("Item"),
+            "fieldtype": "Data",
+            "width": 150,
+        })
+    columns.extend([
         {
             "fieldname": "total_target",
             "label": _("Total Target"),
@@ -106,7 +136,8 @@ def get_columns(partner_doctype, with_salary):
             "options": options,
             "width": 150,
             "default": 0.00,
-        }]
+        }
+    ])
     if with_salary:
         columns.extend([
         {
@@ -134,8 +165,16 @@ def get_data(filters, partner_doctype):
     sales_users = []
 
     for d in sales_users_data:
-        if d.parent not in sales_users:
-            sales_users.append(d.parent)
+        if filters.get("team_lead"):
+            team_lead = frappe.db.get_value(partner_doctype, {"name": d.parent}, fieldname="parent_sales_person")
+            if filters.get("team_lead") == team_lead:
+                if d.parent not in sales_users:
+                    sales_users.append(d.parent)
+            else:
+                sales_users.remove(d)
+        else:
+            if d.parent not in sales_users:
+                sales_users.append(d.parent)
 
     date_field = "posting_date"
 
@@ -159,6 +198,7 @@ def prepare_data(
 
     target_qty_amt_field = "target_amount"
     qty_or_amount_field = "base_net_amount"
+    based_on = filters.get("based_on")
 
     item_group_parent_child_map = get_item_group_parent_child_map()
 
@@ -166,6 +206,8 @@ def prepare_data(
 
         if d.parent not in rows:
             rows.setdefault(d.parent, {"total_target": 0, "total_achieved": 0, "per_achieved": 0, "total_variance": 0, "per_day": 0, "salary": 0, "per_salary": 0})
+            if based_on in ("Item Group", "Item"):
+                rows[d.parent]["item_groups"] = {}
 
         details = rows[d.parent]
         
@@ -181,6 +223,17 @@ def prepare_data(
                 )
             ):
                 details["total_achieved"] += r.get(qty_or_amount_field, 0)
+                if based_on == "Item Group":
+                    if r.item_group not in details.get["item_groups"]:
+                        details.get["item_groups"].setdefault(r.item_group, {"total_achieved": 0, "items": []})
+                    details.get["item_groups"].get(r.item_group).get("total_achieved") += r.get(qty_or_amount_field, 0)
+                if based_on == "Item":
+                    item_groups = details.get("item_groups", {})
+                    item_group_items = item_groups.get(r.item_group, {}).get("items", [])
+                    if isinstance(item_group_items, list):
+                        if not any(r.item_code == i.item_code for i in item_group_items):
+                            item_group_items.append({r.item_code:0})
+                    item_group_items[r.item_code]+= r.get(qty_or_amount_field, 0)
 
         details["total_variance"] = details.get("total_achieved") - details.get("total_target")
         details["per_achieved"] = details.get("total_achieved") / details.get("total_target") * 100
@@ -226,6 +279,7 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
 
     query = query.select(
         child_doc.item_group,
+        child_doc.item_code,
         parent_doc[date_field],
         (net_amount).as_("base_net_amount"),
         sales_field_col,
