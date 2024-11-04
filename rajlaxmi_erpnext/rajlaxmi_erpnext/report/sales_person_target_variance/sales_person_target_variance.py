@@ -26,11 +26,11 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         elif filters.get("based_on") == "Item":
             item_groups = value.get("item_groups", {})
             for k, v in item_groups.items():
-                for i, a in v.get("items").items():
+                for i in v.get("items"):
                     item = {
                         "item_group": k,
-                        "item_code": i,
-                        "total_achieved": a
+                        "item_code": i.get("item_code"),
+                        "total_achieved": i.get("total_achieved")
                     }
                     data.append(item)
         value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
@@ -233,11 +233,15 @@ def prepare_data(
                     item_groups = details.get("item_groups", {})
                     item_group_items = item_groups.get(r.item_group, {}).get("items", [])
                     if len(item_group_items):
-                        if r.item_code not in item_group_items:
-                            item_group_items.append({r.item_code:0})
-                    for i, v in item_group_items.items():
-                        if r.item_code == i:
-                            v += r.get(qty_or_amount_field, 0)
+                        if not any(r.item_code == i["item_code"] for i in item_group_items):
+                            item_group_items.append(
+                                {"item_code": r.item_code,
+                                 "total_achieved": 0
+                                }
+                            )
+                    for i in item_group_items:
+                        if r.item_code == i["item_code"]:
+                            i["total_achieved"] += r.get(qty_or_amount_field, 0)
 
         details["total_variance"] = details.get("total_achieved") - details.get("total_target")
         details["per_achieved"] = details.get("total_achieved") / details.get("total_target") * 100
