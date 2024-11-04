@@ -42,7 +42,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
             per_day = get_per_day_requirement(filters, value.get("total_variance")*-1)
             value.update({"per_day": per_day})
         if filters.get("based_on") in ("Item Group", "Item"):
-            value.update({"bold": 1})
+            value.update({"item_group": "Total","bold": 1})
         data.append(value)
 
     return columns, data
@@ -171,7 +171,7 @@ def get_data(filters, partner_doctype):
                 if d.parent not in sales_users:
                     sales_users.append(d.parent)
             else:
-                sales_users.remove(d)
+                sales_users_data.remove(d)
         else:
             if d.parent not in sales_users:
                 sales_users.append(d.parent)
@@ -232,7 +232,7 @@ def prepare_data(
                 if based_on == "Item":
                     item_groups = details.get("item_groups", {})
                     item_group_items = item_groups.get(r.item_group, {}).get("items", [])
-                    if isinstance(item_group_items, list):
+                    if len(item_group_items):
                         if not any(r.item_code == i.item_code for i in item_group_items):
                             item_group_items.append({r.item_code:0})
                     for i in item_group_items:
