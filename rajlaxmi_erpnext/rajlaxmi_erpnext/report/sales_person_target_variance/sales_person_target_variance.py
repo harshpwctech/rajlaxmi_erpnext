@@ -241,6 +241,13 @@ def prepare_data(
                                         "total_achieved": 0
                                     }
                                 )
+                        else:
+                            item_group_items.append(
+                                    {
+                                        "item_code": r.item_code,
+                                        "total_achieved": 0
+                                    }
+                                )
                         for i in item_group_items:
                             if r.item_code == i["item_code"]:
                                 i["total_achieved"] += r.get(qty_or_amount_field, 0)
