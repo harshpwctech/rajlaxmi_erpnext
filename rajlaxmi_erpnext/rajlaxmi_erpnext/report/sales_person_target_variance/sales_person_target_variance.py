@@ -163,18 +163,15 @@ def get_data(filters, partner_doctype):
     if not sales_users_data:
         return
     sales_users = []
-
+    if filters.get("team_lead"):
+        team_lead = filters.get("team_lead")
+        sales_users_data = [
+            d for d in sales_users_data
+            if frappe.db.get_value(partner_doctype, {"name": d.parent}, fieldname="parent_sales_person") == team_lead
+        ]
     for d in sales_users_data:
-        if filters.get("team_lead"):
-            team_lead = frappe.db.get_value(partner_doctype, {"name": d.parent}, fieldname="parent_sales_person")
-            if filters.get("team_lead") == team_lead:
-                if d.parent not in sales_users:
-                    sales_users.append(d.parent)
-            else:
-                sales_users_data.remove(d)
-        else:
-            if d.parent not in sales_users:
-                sales_users.append(d.parent)
+        if d.parent not in sales_users:
+            sales_users.append(d.parent)
 
     date_field = "posting_date"
 
