@@ -233,11 +233,11 @@ def prepare_data(
                     item_groups = details.get("item_groups", {})
                     item_group_items = item_groups.get(r.item_group, {}).get("items", [])
                     if len(item_group_items):
-                        if not any(r.item_code == i for i, a in item_group_items.items()):
+                        if r.item_code not in item_group_items:
                             item_group_items.append({r.item_code:0})
-                    for i in item_group_items:
+                    for i, v in item_group_items.items():
                         if r.item_code == i:
-                            i += r.get(qty_or_amount_field, 0)
+                            v += r.get(qty_or_amount_field, 0)
 
         details["total_variance"] = details.get("total_achieved") - details.get("total_target")
         details["per_achieved"] = details.get("total_achieved") / details.get("total_target") * 100
