@@ -24,7 +24,7 @@ def notify_not_checked_in_employees():
         filters=[
             ["Leave Application", "from_date", "<=", getdate()],
             ["Leave Application", "to_date", ">=", getdate()],
-            ["Leave Application", "status", "=", "Approved"]
+            ["Leave Application", "status", "=", "Approved"],
             ["Leave Application", "docstatus", "=", "1"]
         ],
         fields=["employee"]
