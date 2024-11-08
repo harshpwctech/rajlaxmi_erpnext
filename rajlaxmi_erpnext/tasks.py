@@ -59,13 +59,14 @@ def notify_not_checked_in_employees():
                             managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
             
             message = frappe.render_template(email_template.response, args)
+            subject = frappe.render_template(email_template.subject, args)
             notify(
                     {
                         # for post in messages
                         "message": message,
                         "message_to": parent_doc.prefered_email,
                         # for email
-                        "subject": email_template.subject,
+                        "subject": subject,
                         "cc": managers
                     }
                 )
@@ -119,13 +120,14 @@ def notify_not_checked_out_employees():
                             managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
             
             message = frappe.render_template(email_template.response, args)
+            subject = frappe.render_template(email_template.subject, args)
             notify(
                     {
                         # for post in messages
                         "message": message,
                         "message_to": parent_doc.prefered_email,
                         # for email
-                        "subject": email_template.subject,
+                        "subject": subject,
                         "cc": managers
                     }
                 )
