@@ -146,23 +146,23 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
 # 	"all": [
 # 		"rajlaxmi_erpnext.tasks.all"
 # 	],
 # 	"daily": [
 # 		"rajlaxmi_erpnext.tasks.daily"
 # 	],
-# 	"hourly": [
-# 		"rajlaxmi_erpnext.tasks.hourly"
-# 	],
+	"hourly": [
+		"rajlaxmi_erpnext.tasks.hourly"
+	],
 # 	"weekly": [
 # 		"rajlaxmi_erpnext.tasks.weekly"
 # 	],
 # 	"monthly": [
 # 		"rajlaxmi_erpnext.tasks.monthly"
 # 	],
-# }
+}
 
 # Testing
 # -------
