@@ -41,10 +41,10 @@ def notify_not_checked_in_employees():
     for e in not_checked_in_employees:
         now = get_datetime()
         shift_timings = get_actual_start_end_datetime_of_shift(
-			e.name, now, True
+			e, now, True
 		)
         if now >= shift_timings.actual_start and now <= shift_timings.actual_end:
-            parent_doc = frappe.get_doc("Employee", e.name)
+            parent_doc = frappe.get_doc("Employee", e)
             args = parent_doc.as_dict()
             reporting_manager = None
             if parent_doc.reports_to:
