@@ -90,13 +90,13 @@ def notify_not_checked_out_employees():
         fields=["employee"]
     )]
     not_checked_out_employees = [e.name for e in frappe.get_all(
-        "Employee",
+        "Employee Checkin",
         filters=[
-            ["Employee", "name", "not in", employee_checkouts+leave_employee_ids],
-            ["Employee", "user_id", "is", "set"],
-            ["Employee", "status", "=", "Active"],
+            ["Employee Checkin", "employee", "not in", employee_checkouts+leave_employee_ids],
+            ["Employee Checkin","time","Timespan","today"],
+            ["Employee Checkin","log_type","=","IN"]
         ],
-        fields=["name"]
+        fields=["employee"]
     )]
 
     email_template = frappe.get_doc("Email Template", "Employees Not Checked Out")
