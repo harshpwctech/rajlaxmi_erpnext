@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import getdate, get_datetime
+from frappe.utils import getdate, get_datetime, time_diff_in_hours
 from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
@@ -24,6 +24,7 @@ def notify_not_checked_in_employees():
             ["Leave Application", "from_date", "<=", getdate()],
             ["Leave Application", "to_date", ">=", getdate()],
             ["Leave Application", "status", "=", "Approved"]
+            ["Leave Application", "docstatus", "=", "1"]
         ],
         fields=["employee"]
     )]
@@ -46,9 +47,16 @@ def notify_not_checked_in_employees():
         if now >= shift_timings.actual_start and now <= shift_timings.actual_end:
             parent_doc = frappe.get_doc("Employee", e)
             args = parent_doc.as_dict()
-            reporting_manager = None
-            if parent_doc.reports_to:
-                reporting_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email")
+            managers = []
+            if time_diff_in_hours(now, shift_timings.actual_start) < 2 or time_diff_in_hours(shift_timings.actual_end, now) < 2:
+                if parent_doc.reports_to:
+                    if frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"):
+                        managers.append(frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"))
+                    if time_diff_in_hours(shift_timings.actual_end, now) < 2:
+                        if frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to"):
+                            super_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to")
+                            managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
+            
             message = frappe.render_template(email_template.response, args)
             notify(
                     {
@@ -57,7 +65,7 @@ def notify_not_checked_in_employees():
                         "message_to": parent_doc.prefered_email,
                         # for email
                         "subject": email_template.subject,
-                        "cc": reporting_manager
+                        "cc": managers
                     }
                 )
     
