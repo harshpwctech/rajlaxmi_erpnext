@@ -46,18 +46,19 @@ def notify_not_checked_in_employees():
 			e, now, True
 		)
         if shift_timings:
-            if now >= shift_timings.actual_start and now <= shift_timings.actual_end:
+            if now >= shift_timings.start_datetime and now <= shift_timings.end_datetime:
                 parent_doc = frappe.get_doc("Employee", e)
                 args = parent_doc.as_dict()
                 managers = []
-                if time_diff_in_hours(now, shift_timings.actual_start) < 2 or time_diff_in_hours(shift_timings.actual_end, now) < 2:
+                if time_diff_in_hours(now, shift_timings.start_datetime) < 2 or time_diff_in_hours(shift_timings.end_datetime, now) < 2:
                     if parent_doc.reports_to:
                         if frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"):
                             managers.append(frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"))
-                        if time_diff_in_hours(shift_timings.actual_end, now) < 2:
+                        if time_diff_in_hours(shift_timings.end_datetime, now) < 2:
                             if frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to"):
                                 super_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to")
-                                managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
+                                if frappe.db.get_value("Employee", super_manager, "prefered_email"):
+                                    managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
                 
                 message = frappe.render_template(email_template.response, args)
                 subject = frappe.render_template(email_template.subject, args)
@@ -108,18 +109,19 @@ def notify_not_checked_out_employees():
 			e, now, True
 		)
         if shift_timings:
-            if time_diff_in_hours(now, shift_timings.actual_end) > 1:
+            if now > shift_timings.end_datetime:
                 parent_doc = frappe.get_doc("Employee", e)
                 args = parent_doc.as_dict()
                 managers = []
-                if time_diff_in_hours(now, shift_timings.actual_end) > 2:
+                if time_diff_in_hours(now, shift_timings.end_datetime) > 2:
                     if parent_doc.reports_to:
                         if frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"):
                             managers.append(frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"))
-                        if time_diff_in_hours(shift_timings.actual_end, now) > 4:
+                        if time_diff_in_hours(shift_timings.end_datetime, now) > 4:
                             if frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to"):
                                 super_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to")
-                                managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
+                                if frappe.db.get_value("Employee", super_manager, "prefered_email"):
+                                    managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
                 
                 message = frappe.render_template(email_template.response, args)
                 subject = frappe.render_template(email_template.subject, args)
