@@ -4,11 +4,17 @@ from frappe.utils import getdate, get_datetime, time_diff_in_hours
 from hrms.hr.doctype.shift_assignment.shift_assignment import (
 	get_actual_start_end_datetime_of_shift,
 )
+from frappe.desk.query_report import build_xlsx_data
+from erpnext.setup.doctype.holiday_list.holiday_list import is_holiday
+from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
+from frappe.utils.xlsxutils import make_xlsx
 
 def hourly():
     notify_not_checked_in_employees()
     notify_not_checked_out_employees()
 
+# def daily():
+#     send_reports()
 
 def notify_not_checked_in_employees():
     employee_checkins = [ec.employee for ec in frappe.get_all(
@@ -45,23 +51,15 @@ def notify_not_checked_in_employees():
         shift_timings = get_actual_start_end_datetime_of_shift(
 			e, now, True
 		)
-        if shift_timings:
-            if now >= shift_timings.start_datetime and now <= shift_timings.end_datetime:
+        if shift_timings and should_mark_attendance(e, now):
+            if now >= shift_timings.start_datetime and time_diff_in_hours(now, shift_timings.start_datetime) <= 1:
                 parent_doc = frappe.get_doc("Employee", e)
                 args = parent_doc.as_dict()
-                managers = []
-                if time_diff_in_hours(now, shift_timings.start_datetime) < 2 or time_diff_in_hours(shift_timings.end_datetime, now) < 2:
-                    if parent_doc.reports_to:
-                        if frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"):
-                            managers.append(frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"))
-                        if time_diff_in_hours(shift_timings.end_datetime, now) < 2:
-                            if frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to"):
-                                super_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to")
-                                if frappe.db.get_value("Employee", super_manager, "prefered_email"):
-                                    managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
-                
                 message = frappe.render_template(email_template.response, args)
                 subject = frappe.render_template(email_template.subject, args)
+                leave_approver = None
+                if parent_doc.leave_approver:
+                    leave_approver =  frappe.db.get_value("User", parent_doc.leave_approver, "email")
                 notify(
                         {
                             # for post in messages
@@ -69,7 +67,7 @@ def notify_not_checked_in_employees():
                             "message_to": parent_doc.prefered_email,
                             # for email
                             "subject": subject,
-                            "cc": managers
+                            "cc": leave_approver
                         }
                     )
 
@@ -109,20 +107,12 @@ def notify_not_checked_out_employees():
 			e, now, True
 		)
         if shift_timings:
-            if now > shift_timings.end_datetime:
+            if now >= shift_timings.end_datetime and time_diff_in_hours(now, shift_timings.end_datetime) <= 1:
                 parent_doc = frappe.get_doc("Employee", e)
                 args = parent_doc.as_dict()
-                managers = []
-                if time_diff_in_hours(now, shift_timings.end_datetime) > 2:
-                    if parent_doc.reports_to:
-                        if frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"):
-                            managers.append(frappe.db.get_value("Employee", parent_doc.reports_to, "prefered_email"))
-                        if time_diff_in_hours(shift_timings.end_datetime, now) > 4:
-                            if frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to"):
-                                super_manager = frappe.db.get_value("Employee", parent_doc.reports_to, "reports_to")
-                                if frappe.db.get_value("Employee", super_manager, "prefered_email"):
-                                    managers.append(frappe.db.get_value("Employee", super_manager, "prefered_email"))
-                
+                leave_approver = None
+                if parent_doc.leave_approver:
+                    leave_approver =  frappe.db.get_value("User", parent_doc.leave_approver, "email")
                 message = frappe.render_template(email_template.response, args)
                 subject = frappe.render_template(email_template.subject, args)
                 notify(
@@ -132,10 +122,17 @@ def notify_not_checked_out_employees():
                             "message_to": parent_doc.prefered_email,
                             # for email
                             "subject": subject,
-                            "cc": managers
+                            "cc": leave_approver
                         }
                     )
    
+def should_mark_attendance(employee: str, attendance_date: str) -> bool:
+    """Determines whether attendance should be marked on holidays or not"""
+    holiday_list = get_holiday_list_for_employee(employee, False)
+    if is_holiday(holiday_list, attendance_date):
+        return False
+    return True
+
 def notify(args):
     args = frappe._dict(args)
     # args -> message, message_to, subject
@@ -148,8 +145,54 @@ def notify(args):
             recipients=contact,
             subject=args.subject,
             message=args.message,
-            cc=args.cc
+            cc=args.cc,
+            attachments=args.get("attachments", None)
         )
         frappe.msgprint(_("Email sent to {0}").format(contact))
     except frappe.OutgoingEmailError:
         pass
+
+
+# def send_reports():
+#     to_team = ["Sales Team Target Variance"]
+#     to_management = ["Sales Person Target Variance"]
+#     for m in to_management:
+#         data = get_report_content(m)
+#         if not data:
+#             return
+#         if isinstance(data, list):
+#             attachments = [{"fname": m, "fcontent": data}]
+#         frappe.sendmail(
+# 			recipients=self.email_to.split(),
+# 			subject=m,
+# 			message=message,
+# 			attachments=attachments
+# 		)
+#     return
+
+# def get_report_content(report_name):
+#     report = frappe.get_doc("Report", report_name)
+#     if report_name == "Sales Person Target Variance":
+#         filters = {
+#             "company": "",
+
+#         }
+#     columns, data = report.get_data(
+#         limit= 500,
+#         filters=frappe.parse_json(filters) if filters else {},
+#         as_dict=True,
+#         ignore_prepared_report=True,
+#         are_default_filters=False,
+#     )
+#     columns.insert(0, frappe._dict(fieldname="idx", label="", width="30px"))
+#     for i in range(len(data)):
+#         data[i]["idx"] = i + 1
+#     if len(data) == 0:
+#         return None
+#     report_data = frappe._dict()
+#     report_data["columns"] = columns
+#     report_data["result"] = data
+
+#     xlsx_data, column_widths = build_xlsx_data(report_data, [], 1, ignore_visible_idx=True)
+#     xlsx_file = make_xlsx(xlsx_data, report_name, column_widths=column_widths)
+#     return xlsx_file.getvalue()
