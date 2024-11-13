@@ -55,13 +55,13 @@ def get_columns(filters):
 			"fieldname": "team_lead",
 			"label": _("Team Lead"),
 			"fieldtype": "Data",
-			"width": 150,
+			"width": 200,
 		},
 		{
 			"fieldname": "sales_person",
 			"label": _("Sales Person"),
 			"fieldtype": "Data",
-			"width": 150,
+			"width": 200,
 		}]
 	if filters.get("based_on_invoice"):
 		columns.append(
@@ -70,7 +70,7 @@ def get_columns(filters):
 				"label": _("Sales Invoice"),
 				"fieldtype": "Link",
 				"options": "Sales Invoice",
-				"width": 150,
+				"width": 200,
         	}
 		)
 	
@@ -80,7 +80,7 @@ def get_columns(filters):
 			"label": _("MTD Quantity"),
 			"fieldtype": "Int",
 			"default": 0.00,
-			"width": 100,
+			"width": 150,
 		},
 		{
 			"fieldname": "gross_amount",
@@ -88,7 +88,7 @@ def get_columns(filters):
 			"fieldtype": "Currency",
 			"options": "currency",
 			"default": 0.00,
-			"width": 100,
+			"width": 150,
 		},
 		{
 			"fieldname": "margin_amount",
@@ -96,7 +96,7 @@ def get_columns(filters):
 			"fieldtype": "Currency",
 			"options": "currency",
 			"default": 0.00,
-			"width": 100,
+			"width": 150,
 		},
 		{
 			"fieldname": "incentive",
@@ -104,7 +104,7 @@ def get_columns(filters):
 			"fieldtype": "Currency",
 			"options": "currency",
 			"default": 0.00,
-			"width": 100,
+			"width": 150,
 		}
 	])
 	return columns
