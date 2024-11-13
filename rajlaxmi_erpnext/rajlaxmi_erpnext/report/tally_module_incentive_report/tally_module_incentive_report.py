@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+import copy
 from frappe import _
 from frappe.utils.data import get_first_day
 
@@ -23,7 +24,7 @@ def execute(filters=None):
 		for i in details:
 			if filters.get("based_on_invoice"):
 				value.update(i)
-				data.append(value)
+				data.append(copy.deepcopy(value))
 			else:
 				value["qty"] += i["qty"]
 				value["gross_amount"] += i["gross_amount"]
