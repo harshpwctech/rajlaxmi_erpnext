@@ -13,8 +13,14 @@ def hourly():
     notify_not_checked_in_employees()
     notify_not_checked_out_employees()
 
-# def daily():
-#     send_reports()
+def daily():
+    update_last_sync()
+    # send_reports()
+
+def update_last_sync():
+    shift_list = frappe.get_all("Shift Type", filters={"enable_auto_attendance": "1"}, pluck="name")
+    for shift in shift_list:
+        frappe.db.set_value("Shift Type", shift, "last_sync_of_checkin", get_datetime(), update_modified=False)
 
 def notify_not_checked_in_employees():
     employee_checkins = [ec.employee for ec in frappe.get_all(

@@ -150,9 +150,9 @@ scheduler_events = {
 # 	"all": [
 # 		"rajlaxmi_erpnext.tasks.all"
 # 	],
-# 	"daily": [
-# 		"rajlaxmi_erpnext.tasks.daily"
-# 	],
+	"daily": [
+		"rajlaxmi_erpnext.tasks.daily"
+	],
 	"hourly": [
 		"rajlaxmi_erpnext.tasks.hourly"
 	],
