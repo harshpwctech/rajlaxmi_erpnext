@@ -15,37 +15,103 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         return columns, data
 
     for key, value in rows.items():
+        team = frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")
+        team_lead = frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")
+        experience = frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience")
+
         if filters.get("based_on") == "Item Group":
             item_groups = value.get("item_groups", {})
-            for k, v in item_groups.items():
+            for item_group_name, group_data in item_groups.items():
                 item_group = {
-                    "item_group": k,
-                    "total_achieved": v.get("total_achieved", 0)
+                    "item_group": item_group_name,
+                    "total_achieved": group_data.get("total_achieved", 0),
+                    "team": team,
+                    "team_lead": team_lead,
+                    "experience": experience,
+                    frappe.scrub(partner_doctype): key,
                 }
                 data.append(item_group)
+
         elif filters.get("based_on") == "Item":
             item_groups = value.get("item_groups", {})
-            for k, v in item_groups.items():
-                for i in v.get("items"):
-                    item = {
-                        "item_group": k,
-                        "item_code": i.get("item_code"),
-                        "total_achieved": i.get("total_achieved")
+            for item_group_name, group_data in item_groups.items():
+                for item in group_data.get("items", []):
+                    item_data = {
+                        "item_group": item_group_name,
+                        "item_code": item.get("item_code"),
+                        "total_achieved": item.get("total_achieved", 0),
+                        "team": team,
+                        "team_lead": team_lead,
+                        "experience": experience,
+                        frappe.scrub(partner_doctype): key,
                     }
-                    data.append(item)
-        value.update({"team": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="department")})
-        value.update({"team_lead": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="parent_sales_person")})
-        if frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience"):
-            value.update({"experience": frappe.db.get_value(partner_doctype, {"name": key}, fieldname="custom_total_experience")})
-        value.update({frappe.scrub(partner_doctype): key})
+                    data.append(item_data)
+
+        value.update({
+            "team": team,
+            "team_lead": team_lead,
+            "experience": experience,
+            frappe.scrub(partner_doctype): key,
+        })
         if value.get("total_variance") < 0:
-            per_day = get_per_day_requirement(filters, value.get("total_variance")*-1)
+            per_day = get_per_day_requirement(filters, -value.get("total_variance"))
             value.update({"per_day": per_day})
         if filters.get("based_on") in ("Item Group", "Item"):
-            value.update({"item_group": "Total","bold": 1})
+            value.update({"item_group": "Total", "bold": 1})
         data.append(value)
 
-    return columns, data
+    # Group data by team_lead and add totals
+    sorted_data = sorted(data, key=lambda x: x.get('team_lead'))
+    grouped_data = []
+    current_group = None
+    group_total = {
+        "total_target": 0,
+        "total_achieved": 0,
+        "per_achieved": 0,
+        "total_variance": 0,
+    }
+
+    for row in sorted_data:
+        if row.get("team_lead") != current_group:
+            # Add the previous group's total
+            if current_group:
+                grouped_data.append({
+                    "team_lead": f"Total for {current_group}",
+                    "total_target": group_total["total_target"],
+                    "total_achieved": group_total["total_achieved"],
+                    "per_achieved": group_total["per_achieved"],
+                    "total_variance": group_total["total_variance"],
+                    "bold": 1,  # Optional styling key
+                })
+            # Reset totals for the new group
+            current_group = row.get("team_lead")
+            group_total = {
+                "total_target": 0,
+                "total_achieved": 0,
+                "per_achieved": 0,
+                "total_variance": 0,
+            }
+
+        # Add the current row to grouped data
+        grouped_data.append(row)
+
+        # Accumulate group totals
+        group_total["total_target"] += row.get("total_target", 0)
+        group_total["total_achieved"] += row.get("total_achieved", 0)
+        group_total["total_variance"] += row.get("total_variance", 0)
+
+    # Add the last group's total
+    if current_group:
+        grouped_data.append({
+            "team_lead": f"Total for {current_group}",
+            "total_target": group_total["total_target"],
+            "total_achieved": group_total["total_achieved"],
+            "per_achieved": group_total["per_achieved"],
+            "total_variance": group_total["total_variance"],
+            "bold": 1,
+        })
+
+    return columns, grouped_data
 
 def get_columns(partner_doctype, with_salary, based_on):
     fieldtype, options = "Currency", "currency"
@@ -325,14 +391,14 @@ def get_parents_data(filters, partner_doctype):
 
 def get_start_date_end_date(filters):
     if filters.get("period") == "Fiscal Year":
-        fiscal_year = get_fiscal_year(fiscal_year=filters.get("fiscal_year"), as_dict=1)
+        fiscal_year = get_fiscal_year(date=filters.get("date"), as_dict=1)
         return fiscal_year.year_start_date, fiscal_year.year_end_date
     elif filters.get("period") == "MTD":
         end_date = filters.get("date")
         start_date = get_first_day(end_date)
         return start_date, end_date
     elif filters.get("period") == "Month":
-        start_date = getdate("{1}-{0}-01".format(filters.get("month"), filters.get("year")))
+        start_date = get_first_day(filters.get("date"))
         end_date = get_last_day(start_date)
         return start_date, end_date
 
@@ -353,7 +419,7 @@ def get_target_percentage(filters, distribution_id):
                 total_percent += d.percentage_allocation
         return total_percent*mtd_days/total_days_of_month
     elif filters.get("period") == "Month":
-        start_date = getdate("{1}-{0}-01".format(filters.get("month"), filters.get("year")))
+        start_date = get_first_day(filters.get("date"))
         month = start_date.strftime("%B").title()
         for d in doc.percentages:
             if d.month == month:
@@ -362,7 +428,7 @@ def get_target_percentage(filters, distribution_id):
 def get_per_day_requirement(filters, total_variance):
     today = getdate()
     if filters.get("period") == "Fiscal Year":
-        fiscal_year = get_fiscal_year(fiscal_year=filters.get("fiscal_year"), as_dict=1)
+        fiscal_year = get_fiscal_year(date=filters.get("date"), as_dict=1)
         balance_days =  date_diff(fiscal_year.year_end_date, today)
         if balance_days > 0:
             return total_variance/balance_days
@@ -373,7 +439,7 @@ def get_per_day_requirement(filters, total_variance):
         if balance_days > 0:
             return total_variance/balance_days
     elif filters.get("period") == "Month":
-        start_date = getdate("{1}-{0}-01".format(filters.get("month"), filters.get("year")))
+        start_date = get_first_day(filters.get("date"))
         end_date = get_last_day(start_date)
         balance_days =  date_diff(end_date, today)
         if balance_days > 0:
