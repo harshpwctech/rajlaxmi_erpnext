@@ -72,7 +72,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
     }
 
     for row in sorted_data:
-        if row.get("team_lead") != current_group and not row.get("item_group", None):
+        if row.get("team_lead") != current_group:
             # Add the previous group's total
             if current_group:
                 grouped_data.append({
