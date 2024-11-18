@@ -57,7 +57,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
             per_day = get_per_day_requirement(filters, -value.get("total_variance"))
             value.update({"per_day": per_day})
         if filters.get("based_on") in ("Item Group", "Item"):
-            value.update({"item_group": "Total", "bold": 1})
+            value.update({"item_group": "Total for {key}", "bold": 1})
         data.append(value)
 
     # Group data by team_lead and add totals
@@ -79,9 +79,9 @@ def get_data_column(filters, partner_doctype, with_salary=True):
                     "team_lead": f"Total for {current_group}",
                     "total_target": group_total["total_target"],
                     "total_achieved": group_total["total_achieved"],
-                    "per_achieved": group_total["per_achieved"],
+                    "per_achieved": group_total["total_achieved"] / group_total["total_target"] * 100,
                     "total_variance": group_total["total_variance"],
-                    "bold": 1,  # Optional styling key
+                    "bold": 1,
                 })
             # Reset totals for the new group
             current_group = row.get("team_lead")
@@ -95,10 +95,11 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         # Add the current row to grouped data
         grouped_data.append(row)
 
-        # Accumulate group totals
-        group_total["total_target"] += row.get("total_target", 0)
-        group_total["total_achieved"] += row.get("total_achieved", 0)
-        group_total["total_variance"] += row.get("total_variance", 0)
+        # Accumulate group totals and exclude rows with item_group
+        if not row.get("item_group", None):
+            group_total["total_target"] += row.get("total_target", 0)
+            group_total["total_achieved"] += row.get("total_achieved", 0)
+            group_total["total_variance"] += row.get("total_variance", 0)
 
     # Add the last group's total
     if current_group:
@@ -106,7 +107,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
             "team_lead": f"Total for {current_group}",
             "total_target": group_total["total_target"],
             "total_achieved": group_total["total_achieved"],
-            "per_achieved": group_total["per_achieved"],
+            "per_achieved": group_total["total_achieved"] / group_total["total_target"] * 100,
             "total_variance": group_total["total_variance"],
             "bold": 1,
         })
@@ -446,22 +447,3 @@ def get_per_day_requirement(filters, total_variance):
             return total_variance/balance_days
     
     return 0.00
-
-    
-
-@frappe.whitelist()
-def get_attendance_years() -> str:
-    """Returns all the years for which attendance records exist"""
-    sals_invoice = frappe.qb.DocType("Sales Invoice")
-    year_list = (
-        frappe.qb.from_(sals_invoice)
-        .select(Extract("year", sals_invoice.posting_date).as_("year"))
-        .distinct()
-    ).run(as_dict=True)
-
-    if year_list:
-        year_list.sort(key=lambda d: d.year, reverse=True)
-    else:
-        year_list = [frappe._dict({"year": getdate().year})]
-
-    return "\n".join(cstr(entry.year) for entry in year_list)
