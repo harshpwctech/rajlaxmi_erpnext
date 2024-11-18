@@ -57,7 +57,7 @@ def get_data_column(filters, partner_doctype, with_salary=True):
             per_day = get_per_day_requirement(filters, -value.get("total_variance"))
             value.update({"per_day": per_day})
         if filters.get("based_on") in ("Item Group", "Item"):
-            value.update({"item_group": "Total for {key}", "bold": 1})
+            value.update({frappe.scrub(partner_doctype): f"Total for {key}", "bold": 1})
         data.append(value)
 
     # Group data by team_lead and add totals
