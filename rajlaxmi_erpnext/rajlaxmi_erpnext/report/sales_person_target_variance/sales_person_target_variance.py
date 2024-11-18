@@ -355,7 +355,8 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
     else:
         net_amount = parent_doc.custom_net_amount_eligible_for_commission
         sales_field_col = parent_doc[sales_field]
-
+    
+    allowed_invoices = [s.name for s in frappe.get_all("Sales Invoice", fields=["name"])]
     query = query.select(
         child_doc.item_group,
         child_doc.item_code,
@@ -365,6 +366,7 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
     ).where(
         #For testing
         (parent_doc.docstatus == 0)
+        & (parent_doc.name.isin(allowed_invoices))
         & (parent_doc[date_field].between(start_date, end_date))
         & (sales_field_col.isin(sales_users_or_territory_data))
     )
