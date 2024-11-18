@@ -356,7 +356,6 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
         net_amount = parent_doc.custom_net_amount_eligible_for_commission
         sales_field_col = parent_doc[sales_field]
     
-    allowed_invoices = [s.name for s in frappe.get_all("Sales Invoice", fields=["name"])]
     query = query.select(
         child_doc.item_group,
         child_doc.item_code,
@@ -366,7 +365,6 @@ def get_actual_data(filters, sales_users_or_territory_data, date_field, sales_fi
     ).where(
         #For testing
         (parent_doc.docstatus == 0)
-        & (parent_doc.name.isin(allowed_invoices))
         & (parent_doc[date_field].between(start_date, end_date))
         & (sales_field_col.isin(sales_users_or_territory_data))
     )
@@ -386,11 +384,12 @@ def get_parents_data(filters, partner_doctype):
     fiscal_year =  get_fiscal_year(start_date)
     filters_dict["fiscal_year"] = fiscal_year[0]
 
-    return frappe.get_all(
+    target_details = frappe.get_all(
         "Target Detail",
         filters=filters_dict,
         fields=["parent", "item_group", target_qty_amt_field, "fiscal_year", "distribution_id"],
     )
+    return [t for t in target_details if frappe.has_permission(partner_doctype, doc=t.parent)]
 
 def get_start_date_end_date(filters):
     if filters.get("period") == "Fiscal Year":
