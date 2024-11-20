@@ -70,6 +70,12 @@ def get_data_column(filters, partner_doctype, with_salary=True):
         "per_achieved": 0,
         "total_variance": 0,
     }
+    grand_total = {
+        "total_target": 0,
+        "total_achieved": 0,
+        "per_achieved": 0,
+        "total_variance": 0,
+    }
 
     for row in sorted_data:
         if row.get("team_lead") != current_group:
@@ -83,6 +89,9 @@ def get_data_column(filters, partner_doctype, with_salary=True):
                     "total_variance": group_total["total_variance"],
                     "bold": 1,
                 })
+                grand_total["total_target"] += group_total["total_target"]
+                grand_total["total_achieved"] += group_total["total_achieved"]
+                grand_total["total_variance"] += group_total["total_variance"]
             # Reset totals for the new group
             current_group = row.get("team_lead")
             group_total = {
@@ -111,6 +120,18 @@ def get_data_column(filters, partner_doctype, with_salary=True):
             "total_variance": group_total["total_variance"],
             "bold": 1,
         })
+        grand_total["total_target"] += group_total["total_target"]
+        grand_total["total_achieved"] += group_total["total_achieved"]
+        grand_total["total_variance"] += group_total["total_variance"]
+    
+    grouped_data.append({
+        frappe.scrub(partner_doctype): "Grand Total",
+        "total_target": grand_total["total_target"],
+        "total_achieved": grand_total["total_achieved"],
+        "per_achieved": grand_total["total_achieved"] / grand_total["total_target"] * 100,
+        "total_variance": grand_total["total_variance"],
+        "bold": 1,
+    })
 
     return columns, grouped_data
 
