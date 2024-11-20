@@ -251,6 +251,7 @@ def get_data(filters, partner_doctype):
     if not sales_users_data:
         return
     sales_users = []
+    sales_user_wise_item_groups = {}
     if filters.get("team_lead"):
         team_lead = filters.get("team_lead")
         sales_users_data = [
@@ -260,6 +261,9 @@ def get_data(filters, partner_doctype):
     for d in sales_users_data:
         if d.parent not in sales_users:
             sales_users.append(d.parent)
+        sales_user_wise_item_groups.setdefault(d.parent, [])
+        if d.item_group:
+            sales_user_wise_item_groups[d.parent].append(d.item_group)
 
     date_field = "posting_date"
 
@@ -268,16 +272,18 @@ def get_data(filters, partner_doctype):
     return prepare_data(
         filters,
         sales_users_data,
+        sales_user_wise_item_groups,
         actual_data,
-        sales_field,
+        sales_field
     )
 
 
 def prepare_data(
     filters,
     sales_users_data,
+    sales_user_wise_item_groups,
     actual_data,
-    sales_field,
+    sales_field
 ):
     rows = {}
 
@@ -303,7 +309,8 @@ def prepare_data(
             if (
                 r.get(sales_field) == d.parent
                 and (
-                    r.item_group == d.item_group
+                    not sales_user_wise_item_groups.get(d.parent)
+                    or r.item_group == d.item_group
                     or r.item_group in item_group_parent_child_map.get(d.item_group, [])
                 )
             ):
