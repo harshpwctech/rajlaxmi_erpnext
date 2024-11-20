@@ -441,8 +441,8 @@ def get_target_percentage(filters, distribution_id):
         month = date.strftime("%B").title()
         start_date = get_first_day(date)
         end_date = get_last_day(start_date)
-        total_days_of_month = date_diff(end_date, start_date)
-        mtd_days = date_diff(date, start_date)
+        total_days_of_month = 25
+        mtd_days = date_diff(date, start_date) + 1
         total_percent = 0
         for d in doc.percentages:
             if d.month == month:
