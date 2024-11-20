@@ -73,7 +73,8 @@ def notify_not_checked_in_employees():
                             "message_to": parent_doc.prefered_email,
                             # for email
                             "subject": subject,
-                            "cc": leave_approver
+                            "cc": leave_approver,
+                            "notify": "employee"
                         }
                     )
 
@@ -128,7 +129,8 @@ def notify_not_checked_out_employees():
                             "message_to": parent_doc.prefered_email,
                             # for email
                             "subject": subject,
-                            "cc": leave_approver
+                            "cc": leave_approver,
+                            "notify": "employee"
                         }
                     )
    
